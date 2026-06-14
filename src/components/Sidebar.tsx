@@ -66,7 +66,7 @@ export default function Sidebar({
           </div>
           <div>
             <h1 className="text-sm font-bold text-slate-900 dark:text-slate-150 tracking-tight leading-tight">
-              Lumina AI
+              Nimma Mitra
             </h1>
             <span className="text-[10px] font-mono text-slate-400 capitalize flex items-center space-x-1 mt-0.5 select-none font-medium">
               {isGuest ? (

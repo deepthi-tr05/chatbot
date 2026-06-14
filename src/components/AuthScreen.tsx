@@ -97,7 +97,7 @@ export default function AuthScreen({ onLoginSuccess }: AuthScreenProps) {
             </motion.div>
             
             <h1 className="text-2xl font-sans font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-              Lumina AI
+              Nimma Mitra
             </h1>
             <p className="text-xs text-slate-400 dark:text-slate-400 mt-1.5 max-w-xs mx-auto leading-relaxed">
               Real-time sentiment-aware dialogue translation powered by Indian voice synthesis
