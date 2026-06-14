@@ -1,0 +1,141 @@
+{
+  "entities": {
+    "user_profiles": {
+      "title": "UserProfile",
+      "description": "User profile settings and customization attributes.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique user ID matching Firebase Auth UID."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User email address."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User profile display name."
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "Custom avatar image URL or data URL."
+        },
+        "avatarColor": {
+          "type": "string",
+          "description": "Ambient gradient accent hex color code for the profile icon."
+        },
+        "avatarIcon": {
+          "type": "string",
+          "description": "Selected theme preset icon for the customizable profile."
+        },
+        "preferredLanguage": {
+          "type": "string",
+          "description": "The user's preferred native language for the voice translator."
+        },
+        "preferredModel": {
+          "type": "string",
+          "description": "The preferred LLM selected by the user for chat completions."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the last profile update."
+        }
+      },
+      "required": ["userId", "email", "displayName", "avatarColor", "avatarIcon", "preferredLanguage"]
+    },
+    "chats": {
+      "title": "Chat",
+      "description": "A conversation thread created by the user.",
+      "type": "object",
+      "properties": {
+        "chatId": {
+          "type": "string",
+          "description": "Unique key identifier for the chat session."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner UID of this chat session."
+        },
+        "title": {
+          "type": "string",
+          "description": "Derived topic or custom title of the chat."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the thread was started."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "When the thread was last written to."
+        }
+      },
+      "required": ["chatId", "userId", "title", "createdAt", "updatedAt"]
+    },
+    "messages": {
+      "title": "Message",
+      "description": "An individual chat bubble exchange containing sentiment, language, and potential media.",
+      "type": "object",
+      "properties": {
+        "messageId": {
+          "type": "string",
+          "description": "Unique message ID."
+        },
+        "chatId": {
+          "type": "string",
+          "description": "Foreign key reference to parent chat."
+        },
+        "sender": {
+          "type": "string",
+          "enum": ["user", "bot"],
+          "description": "Indicates if message was sent by human user or conversational AI."
+        },
+        "text": {
+          "type": "string",
+          "description": "Message content typed or spoken."
+        },
+        "sentiment": {
+          "type": "string",
+          "enum": ["positive", "neutral", "negative"],
+          "description": "Real-time computed sentiment tags from model response."
+        },
+        "detectedLanguage": {
+          "type": "string",
+          "description": "The ISO language code detected for this conversation turn."
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "Base64 payload or public media URL for AI-generated images."
+        },
+        "audioBase64": {
+          "type": "string",
+          "description": "Generated speech snippet base64 stream so speech is persistable across devices."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation timestamp."
+        }
+      },
+      "required": ["messageId", "chatId", "sender", "text", "sentiment", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/user_profiles/{userId}": {
+      "schema": "user_profiles",
+      "description": "Stores user customization configurations, preferences, and avatars."
+    },
+    "/chats/{chatId}": {
+      "schema": "chats",
+      "description": "Contains a list of conversation sessions grouped per user."
+    },
+    "/chats/{chatId}/messages/{messageId}": {
+      "schema": "messages",
+      "description": "Subcollection housing message history bubbles for high-performance retrieval."
+    }
+  }
+}

@@ -1,0 +1,111 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Safety Net: Default Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 2. Reuseable Security Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string 
+        && id.size() <= 128 
+        && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Relational Check for Messages: Fetch parent Chat to confirm ownership
+    function isParentChatOwner(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId)).data.userId == request.auth.uid;
+    }
+
+    // 3. Entity Validation Helpers
+    function isValidUserProfile(data) {
+      return data.userId == request.auth.uid
+        && data.email is string && data.email.size() <= 200
+        && data.displayName is string && data.displayName.size() <= 100
+        && data.avatarColor is string && data.avatarColor.size() <= 50
+        && data.avatarIcon is string && data.avatarIcon.size() <= 50
+        && data.preferredLanguage is string && data.preferredLanguage.size() <= 20
+        && (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 200000))
+        && (!('preferredModel' in data) || (data.preferredModel is string && data.preferredModel.size() <= 100));
+    }
+
+    function isValidChat(data) {
+      return data.chatId is string && data.chatId.size() <= 128
+        && data.userId == request.auth.uid
+        && data.title is string && data.title.size() <= 500;
+    }
+
+    function isValidMessage(data) {
+      return data.messageId is string && data.messageId.size() <= 128
+        && data.chatId is string && data.chatId.size() <= 128
+        && (data.sender == 'user' || data.sender == 'bot')
+        && data.text is string && data.text.size() <= 50000
+        && (data.sentiment == 'positive' || data.sentiment == 'neutral' || data.sentiment == 'negative')
+        && (!('detectedLanguage' in data) || (data.detectedLanguage is string && data.detectedLanguage.size() <= 20))
+        && (!('imageUrl' in data) || (data.imageUrl is string && data.imageUrl.size() <= 2000000))
+        && (!('audioBase64' in data) || (data.audioBase64 is string && data.audioBase64.size() <= 5000000));
+    }
+
+    // 4. Matches per Collection
+    match /user_profiles/{userId} {
+      allow get: if isSignedIn() && request.auth.uid == userId;
+      allow list: if isSignedIn() && request.auth.uid == userId;
+      allow create: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidUserProfile(incoming())
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn() 
+        && request.auth.uid == userId 
+        && isValidUserProfile(incoming())
+        && incoming().updatedAt == request.time;
+      allow delete: if isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /chats/{chatId} {
+      allow get: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn()
+        && isValidId(chatId)
+        && isValidChat(incoming())
+        // Enforce Server Timestamps
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(chatId)
+        && isValidChat(incoming())
+        && incoming().userId == existing().userId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        // Action: Rename Chat
+        && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    match /chats/{chatId}/messages/{messageId} {
+      allow get: if isSignedIn() && isParentChatOwner(chatId);
+      allow list: if isSignedIn() && isParentChatOwner(chatId);
+      allow create: if isSignedIn()
+        && isValidId(messageId)
+        && isParentChatOwner(chatId)
+        && isValidMessage(incoming())
+        && incoming().createdAt == request.time;
+      // Messages are immutable once created to prevent data tampering.
+      allow update: if false;
+      allow delete: if isSignedIn() && isParentChatOwner(chatId);
+    }
+  }
+}
